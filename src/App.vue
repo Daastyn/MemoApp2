@@ -21,13 +21,13 @@
     </div>
 
     <div class="notes-container" :style="{ gridTemplateColumns: `repeat(${notesPerRow}, 1fr)` }">
-      <Note v-for="(note, index) in filteredNotes"
+      <NoteItem v-for="(note, index) in filteredNotes"
             :key="index"
             :note-id="'note-' + index"
             :title="note.title"
             :content="note.content"
-            :created-at="note.createdAt"
-            :is-list-note="note.isListNote"
+            :createdAt="note.createdAt"
+            :isListNote="note.isListNote"
             :index="index"
             @update-note="updateNote(index, $event)"
             @delete-note="deleteNote(index)"
@@ -39,12 +39,12 @@
 
 
 <script>
-import Note from './components/Note.vue'
+import NoteItem from './components/Note.vue'
 
 export default {
   name: 'App',
   components: {
-    Note
+    NoteItem
   },
   data() {
     return {

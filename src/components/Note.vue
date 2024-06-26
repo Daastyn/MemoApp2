@@ -1,7 +1,7 @@
 <template>
   <div
     :key="noteId"
-    :draggable="!isEditing"
+    :draggable="!isEditing && !showModal  "
     @dragstart="dragStart"
     @dragover="dragOver"
     @drop="drop"
@@ -56,7 +56,7 @@ export default {
       required: true
     },
     createdAt: {
-      type: [String, Number,Date],
+      type: [String, Number, Date],
       required: true
     },
     isListNote: {
@@ -66,8 +66,6 @@ export default {
   },
   data() {
     return {
-
-      emits: ['update-note', 'delete-note', 'drag-note'],
       isEditing: false,
       showModal: false,
       newTitle: this.title,
@@ -76,7 +74,20 @@ export default {
       formattedCreatedAt: format(new Date(this.createdAt), 'dd/MM/yyyy HH:mm:ss')
     }
   },
+  watch: {
+    createdAt(newVal) {
+      console.log('createdAt changed:', newVal);
+    },
+    isListNote(newVal) {
+      console.log('isListNote changed:', newVal);
+    }
+  },
   methods: {
+    created() {
+      console.log('initial createdAt:', this.createdAt);
+      console.log('initial isListNote:', this.isListNote);
+    },
+
     elenco() {
       const lines = this.content.trim().split('\n');
       let html = '<ul>';
@@ -90,8 +101,9 @@ export default {
       if (this.showModal) {
         this.isEditing = false;
         this.showModal = false;
-        this.$emit('update-note', { id: this.noteId, title: this.newTitle, content: this.newContent });
         console.log(this.isListNote)
+        this.$emit('update-note', { id: this.noteId, title: this.newTitle, content: this.newContent, isListNote:this.isListNote,createdAt:this.createdAt });
+        
       }
     },
     cancelEdit() {
@@ -108,8 +120,6 @@ export default {
       this.showModal = false;
     },
     handleNoteClick() {
-     // console.log(this.showModal)
-   //   console.log(this.isEditing)
       if (!this.isEditing) {
         this.newTitle = this.title;
         this.newContent = this.content;
@@ -143,6 +153,7 @@ export default {
     }
   }
 }
+
 </script>
 
 
