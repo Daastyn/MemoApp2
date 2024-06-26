@@ -39,8 +39,10 @@
   </div>
 </template>
 
+
 <script>
-import NoteItem from './components/Note.vue'
+import axios from 'axios';
+import NoteItem from './components/Note.vue';
 
 export default {
   name: 'App',
@@ -49,24 +51,81 @@ export default {
   },
   data() {
     return {
-      notes: this.loadNotes(),
+      notes: [],
       notesPerRow: 3,
       searchQuery: '',
       sortOrder: 'asc',
-      draggingNote: null
+      appCode: 'app1', // Codice dell'applicazione ONO
+      appDataName: 'all_notes' // Nome unico per l'appData che conterrà tutte le note
+    };
+  },
+  computed: {
+    filteredNotes() {
+      return this.notes
+        .filter(note => note && note.title && note.title.toLowerCase().includes(this.searchQuery.toLowerCase()))
+        .sort((a, b) => {
+          if (this.sortOrder === 'asc') {
+            return new Date(a.createdAt) - new Date(b.createdAt);
+          } else {
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          }
+        });
     }
   },
   methods: {
-    loadNotes() {
-      let notes = JSON.parse(localStorage.getItem('notes'));
-      if (!notes) {
-        notes = [
-          { id: 1, title: 'Titolo nota 1', content: 'Contenuto nota 1', createdAt: new Date(), isListNote: false },
-          { id: 2, title: 'Titolo nota 2', content: 'Contenuto nota 2', createdAt: new Date(), isListNote: false },
-          { id: 3, title: 'Titolo nota 3', content: 'Contenuto nota 3', createdAt: new Date(), isListNote: false }
-        ];
+    async loadNotes() {
+      try {
+        const notes = await this.getAllNotes();
+        this.notes = notes.map(item => JSON.parse(item.data));
+        console.log(this.notes)
+      } catch (error) {
+        console.error('Errore durante il caricamento delle note:', error);
+        // Gestisci l'errore, ad esempio fornendo un feedback all'utente
       }
-      return notes.filter(note => note != null); // Ensure no null notes
+    },
+    async saveNotes() {
+      try {
+        const allNotes = this.notes.map(note => ({
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          createdAt: note.createdAt,
+          isListNote: note.isListNote
+        }));
+        console.log(allNotes)
+        const appData = {
+          notes: allNotes
+        };
+        console.log(appData)
+        const dataToSave = {
+          appCode: this.appCode,
+          dataName: this.appDataName,
+          dataValue: JSON.stringify(appData)
+        };
+        console.log(dataToSave)
+        await this.makeONORequest('SetONOAppData', dataToSave);
+      } catch (error) {
+        console.error('Errore durante il salvataggio delle note:', error);
+        // Gestisci l'errore, ad esempio fornendo un feedback all'utente
+      }
+    },
+    async getAllNotes() {
+      const getAllDataReq = {
+        appCode: this.appCode
+      };
+      const response = await this.makeONORequest('GetONOApps', getAllDataReq);
+      return response.data;
+    },
+    async makeONORequest(endpoint, requestData) {
+      try {
+        const response = await axios.post('http://139.59.150.152:7576/grpc/'+endpoint, {
+          params: requestData
+        });
+        return response.data;
+      } catch (error) {
+        console.error(`Errore durante la richiesta ${endpoint}:`, error);
+        throw error; // Rilancia l'errore per gestirlo altrove, se necessario
+      }
     },
     addNote() {
       const newNote = { id: Date.now(), title: 'Nuova nota', content: 'Contenuto nuova nota', createdAt: new Date(), isListNote: false };
@@ -92,6 +151,9 @@ export default {
         this.saveNotes();
       }
     },
+    toggleSortOrder() {
+      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    },
     handleDragNote({ fromIndex, toIndex }) {
       const draggedNote = this.notes[fromIndex];
       this.notes.splice(fromIndex, 1);
@@ -106,33 +168,19 @@ export default {
         draggedNote,
         ...notesWithoutDragged.slice(toIndex)
       ];
+      this.saveNotes();
     },
     handleDragEndNote() {
       this.saveNotes();
-    },
-    toggleSortOrder() {
-      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-    },
-    saveNotes() {
-      localStorage.setItem('notes', JSON.stringify(this.notes));
     }
   },
-  computed: {
-    filteredNotes() {
-      console.log("Computing filteredNotes with:", this.notes);
-      return this.notes
-        .filter(note => note && note.title && note.title.toLowerCase().includes(this.searchQuery.toLowerCase()))
-        .sort((a, b) => {
-          if (this.sortOrder === 'asc') {
-            return new Date(a.createdAt) - new Date(b.createdAt);
-          } else {
-            return new Date(b.createdAt) - new Date(a.createdAt);
-          }
-        });
-    }
+  async mounted() {
+    await this.loadNotes(); // Carica le note quando il componente è montato
   }
-}
+};
 </script>
+
+
 
 
 
