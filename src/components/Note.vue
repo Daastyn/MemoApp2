@@ -40,7 +40,7 @@ export default {
   name: 'NoteItem',
   props: {
     noteId: {
-      type: String,
+      type: [String,Number],
       required: true
     },
     title: {
@@ -84,8 +84,8 @@ export default {
   },
   methods: {
     created() {
-      console.log('initial createdAt:', this.createdAt);
-      console.log('initial isListNote:', this.isListNote);
+      //console.log('initial createdAt:', this.createdAt);
+      //console.log('initial isListNote:', this.isListNote);
     },
 
     elenco() {

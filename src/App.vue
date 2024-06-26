@@ -22,21 +22,22 @@
 
     <div class="notes-container" :style="{ gridTemplateColumns: `repeat(${notesPerRow}, 1fr)` }">
       <NoteItem v-for="(note, index) in filteredNotes"
-            :key="index"
-            :note-id="'note-' + index"
+            :key="note.id"
+            :note-id="note.id"
             :title="note.title"
             :content="note.content"
             :createdAt="note.createdAt"
             :isListNote="note.isListNote"
             :index="index"
-            @update-note="updateNote(index, $event)"
-            @delete-note="deleteNote(index)"
+            @update-note="updateNote"
+            @delete-note="deleteNote"
             @drag-note="handleDragNote"
+            @drag-over-note="handleDragOverNote"
+            @drag-end-note="handleDragEndNote"
             class="note-item" />
     </div>
   </div>
 </template>
-
 
 <script>
 import NoteItem from './components/Note.vue'
@@ -48,54 +49,91 @@ export default {
   },
   data() {
     return {
-      notes: [
-        { title: 'Titolo nota 1', content: 'Contenuto nota 1', createdAt: new Date(), isListNote: false },
-        { title: 'Titolo nota 2', content: 'Contenuto nota 2', createdAt: new Date(), isListNote: false },
-        { title: 'Titolo nota 3', content: 'Contenuto nota 3', createdAt: new Date(), isListNote: false }
-      ],
+      notes: this.loadNotes(),
       notesPerRow: 3,
       searchQuery: '',
-      sortOrder: 'asc'
+      sortOrder: 'asc',
+      draggingNote: null
     }
   },
   methods: {
+    loadNotes() {
+      let notes = JSON.parse(localStorage.getItem('notes'));
+      if (!notes) {
+        notes = [
+          { id: 1, title: 'Titolo nota 1', content: 'Contenuto nota 1', createdAt: new Date(), isListNote: false },
+          { id: 2, title: 'Titolo nota 2', content: 'Contenuto nota 2', createdAt: new Date(), isListNote: false },
+          { id: 3, title: 'Titolo nota 3', content: 'Contenuto nota 3', createdAt: new Date(), isListNote: false }
+        ];
+      }
+      return notes.filter(note => note != null); // Ensure no null notes
+    },
     addNote() {
-      this.notes.push({ title: 'Nuova nota', content: 'Contenuto nuova nota', createdAt: new Date(), isListNote: false })
+      const newNote = { id: Date.now(), title: 'Nuova nota', content: 'Contenuto nuova nota', createdAt: new Date(), isListNote: false };
+      this.notes.push(newNote);
+      this.saveNotes();
     },
     addListNote() {
-      this.notes.push({ title: 'Nuova nota con elenco', content: 'Elemento 1\nElemento 2\nElemento 3\n', createdAt: new Date(), isListNote: true })
+      const newNote = { id: Date.now(), title: 'Nuova nota con elenco', content: 'Elemento 1\nElemento 2\nElemento 3\n', createdAt: new Date(), isListNote: true };
+      this.notes.push(newNote);
+      this.saveNotes();
     },
-    updateNote(index, updatedNote) {
-      this.$set(this.notes, index, updatedNote)
+    updateNote(updatedNote) {
+      const index = this.notes.findIndex(note => note.id === updatedNote.id);
+      if (index !== -1) {
+        this.$set(this.notes, index, updatedNote);
+        this.saveNotes();
+      }
     },
-    deleteNote(index) {
-      this.notes.splice(index, 1)
+    deleteNote(noteId) {
+      const index = this.notes.findIndex(note => note.id === noteId);
+      if (index !== -1) {
+        this.notes.splice(index, 1);
+        this.saveNotes();
+      }
     },
     handleDragNote({ fromIndex, toIndex }) {
-      const draggedNote = this.notes[fromIndex]
-      this.notes.splice(fromIndex, 1)
-      this.notes.splice(toIndex, 0, draggedNote)
+      const draggedNote = this.notes[fromIndex];
+      this.notes.splice(fromIndex, 1);
+      this.notes.splice(toIndex, 0, draggedNote);
+      this.saveNotes();
+    },
+    handleDragOverNote({ fromIndex, toIndex }) {
+      const draggedNote = this.notes[fromIndex];
+      const notesWithoutDragged = this.notes.filter((_, index) => index !== fromIndex);
+      this.notes = [
+        ...notesWithoutDragged.slice(0, toIndex),
+        draggedNote,
+        ...notesWithoutDragged.slice(toIndex)
+      ];
+    },
+    handleDragEndNote() {
+      this.saveNotes();
     },
     toggleSortOrder() {
-      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc'
+      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    },
+    saveNotes() {
+      localStorage.setItem('notes', JSON.stringify(this.notes));
     }
   },
   computed: {
     filteredNotes() {
-      const filtered = this.notes.filter(note => 
-        note.title.toLowerCase().includes(this.searchQuery.toLowerCase())
-      )
-      return filtered.sort((a, b) => {
-        if (this.sortOrder === 'asc') {
-          return new Date(a.createdAt) - new Date(b.createdAt)
-        } else {
-          return new Date(b.createdAt) - new Date(a.createdAt)
-        }
-      })
+      console.log("Computing filteredNotes with:", this.notes);
+      return this.notes
+        .filter(note => note && note.title && note.title.toLowerCase().includes(this.searchQuery.toLowerCase()))
+        .sort((a, b) => {
+          if (this.sortOrder === 'asc') {
+            return new Date(a.createdAt) - new Date(b.createdAt);
+          } else {
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          }
+        });
     }
   }
 }
 </script>
+
 
 
 <style scoped>
@@ -236,5 +274,13 @@ body {
 .add-list-btn:active {
   background-color: #d45e00;
   transform: translateY(0);
+}
+.note-item {
+  transition: transform 0.3s ease;
+}
+
+/* Additional styles for drag & drop */
+.note-item.dragging {
+  opacity: 0.5;
 }
 </style>
