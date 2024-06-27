@@ -55,8 +55,9 @@ export default {
       notesPerRow: 3,
       searchQuery: '',
       sortOrder: 'asc',
-      appCode: 'app1', // Codice dell'applicazione ONO
-      appDataName: 'all_notes' // Nome unico per l'appData che conterrà tutte le note
+      appId:3,
+      appCode: 'note_test', // Codice dell'applicazione ONO
+      appDataName: 'test' // Nome unico per l'appData che conterrà tutte le note
     };
   },
   computed: {
@@ -76,8 +77,8 @@ export default {
     async loadNotes() {
       try {
         const notes = await this.getAllNotes();
-        this.notes = notes.map(item => JSON.parse(item.data));
-        console.log(this.notes)
+        this.notes=JSON.parse(notes)
+        //console.log(this.notes)
       } catch (error) {
         console.error('Errore durante il caricamento delle note:', error);
         // Gestisci l'errore, ad esempio fornendo un feedback all'utente
@@ -92,15 +93,13 @@ export default {
           createdAt: note.createdAt,
           isListNote: note.isListNote
         }));
-        console.log(allNotes)
-        const appData = {
-          notes: allNotes
-        };
-        console.log(appData)
+        console.log(JSON.stringify(allNotes))
+    
+        //  console.log(appData)
         const dataToSave = {
-          appCode: this.appCode,
-          dataName: this.appDataName,
-          dataValue: JSON.stringify(appData)
+          "appCode": this.appCode,
+          "dataName": this.appDataName,
+          "dataValue": JSON.stringify(allNotes)
         };
         console.log(dataToSave)
         await this.makeONORequest('SetONOAppData', dataToSave);
@@ -110,17 +109,17 @@ export default {
       }
     },
     async getAllNotes() {
-      const getAllDataReq = {
-        appCode: this.appCode
-      };
-      const response = await this.makeONORequest('GetONOApps', getAllDataReq);
-      return response.data;
+      const response = await this.makeONORequest('GetONOAppDataFromCode', {
+        "appCode": this.appCode,
+        "dataName": this.appDataName
+          });
+          console.log(response.data.data)
+      return response.data.data;
     },
     async makeONORequest(endpoint, requestData) {
       try {
-        const response = await axios.post('http://139.59.150.152:7576/grpc/'+endpoint, {
-          params: requestData
-        });
+        const response = await axios.post('http://139.59.150.152:7576/grpc/'+endpoint,requestData
+        );
         return response.data;
       } catch (error) {
         console.error(`Errore durante la richiesta ${endpoint}:`, error);
